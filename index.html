@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Procedural Ski Game</title>
+
+<style>
+body{margin:0;overflow:hidden;font-family:Arial;background:#87ceeb}
+
+#ui{
+position:absolute;
+top:10px;
+left:10px;
+background:white;
+padding:10px;
+border-radius:10px;
+}
+
+#controls{
+position:absolute;
+bottom:10px;
+left:10px;
+background:white;
+padding:10px;
+border-radius:10px;
+}
+
+button{margin:4px}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="ui">
+Money: $<span id="money">0</span><br>
+Trail: <span id="trail">Green Circle</span>
+</div>
+
+<div id="controls">
+<button onclick="generateMountain()">Generate New Mountain</button>
+<button onmousedown="slowDown=true" onmouseup="slowDown=false">Slow Down</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
+
+<script>
+
+let scene=new THREE.Scene()
+
+let camera=new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+2000
+)
+
+let renderer=new THREE.WebGLRenderer({antialias:true})
+
+renderer.setSize(window.innerWidth,window.innerHeight)
+
+document.body.appendChild(renderer.domElement)
+
+scene.add(new THREE.AmbientLight(0xaaaaaa))
+
+let light=new THREE.DirectionalLight(0xffffff,1)
+light.position.set(100,200,100)
+scene.add(light)
+
+let terrain
+let trees=[]
+
+/* trail difficulty */
+
+let trails=[
+{name:"Green Circle",reward:1},
+{name:"Blue Square",reward:2},
+{name:"Black Diamond",reward:10},
+{name:"Double Black",reward:25},
+{name:"Triple Black",reward:50},
+{name:"Skull",reward:100},
+{name:"Double Skull",reward:250},
+{name:"Triple Skull",reward:500}
+]
+
+let currentTrail
+
+/* player */
+
+let skier=new THREE.Group()
+
+let body=new THREE.Mesh(
+new THREE.BoxGeometry(1,2,.6),
+new THREE.MeshPhongMaterial({color:0xff0000})
+)
+
+body.position.y=2
+
+let head=new THREE.Mesh(
+new THREE.SphereGeometry(.5),
+new THREE.MeshPhongMaterial({color:0xffe0bd})
+)
+
+head.position.y=3.5
+
+let ski1=new THREE.Mesh(
+new THREE.BoxGeometry(.2,.05,3),
+new THREE.MeshPhongMaterial({color:0x000000})
+)
+
+ski1.position.set(-.3,0,0)
+
+let ski2=ski1.clone()
+ski2.position.x=.3
+
+skier.add(body)
+skier.add(head)
+skier.add(ski1)
+skier.add(ski2)
+
+scene.add(skier)
+
+/* snow */
+
+let snow=[]
+
+for(let i=0;i<400;i++){
+
+let p=new THREE.Mesh(
+new THREE.SphereGeometry(.05),
+new THREE.MeshBasicMaterial({color:0xffffff})
+)
+
+p.position.set(
+(Math.random()-.5)*400,
+Math.random()*200,
+(Math.random()-.5)*400
+)
+
+scene.add(p)
+snow.push(p)
+
+}
+
+/* stats */
+
+let money=0
+let speed=.25
+let slowDown=false
+
+function generateMountain(){
+
+if(terrain) scene.remove(terrain)
+
+trees.forEach(t=>scene.remove(t))
+trees=[]
+
+currentTrail=trails[Math.floor(Math.random()*trails.length)]
+
+document.getElementById("trail").innerText=currentTrail.name
+
+/* terrain */
+
+terrain=new THREE.Mesh(
+
+new THREE.PlaneGeometry(300,2000,50,200),
+
+new THREE.MeshPhongMaterial({color:0xffffff})
+
+)
+
+terrain.rotation.x=-Math.PI/2
+
+scene.add(terrain)
+
+/* trail borders */
+
+for(let i=0;i<500;i++){
+
+let side=Math.random()<0.5?-20:20
+
+let trunk=new THREE.Mesh(
+new THREE.CylinderGeometry(.3,.3,3),
+new THREE.MeshPhongMaterial({color:0x8b4513})
+)
+
+trunk.position.set(side,1.5,-i*4)
+
+let leaves=new THREE.Mesh(
+new THREE.ConeGeometry(2,4),
+new THREE.MeshPhongMaterial({color:0x0a5c2a})
+)
+
+leaves.position.set(side,4,-i*4)
+
+scene.add(trunk)
+scene.add(leaves)
+
+trees.push(trunk)
+trees.push(leaves)
+
+}
+
+skier.position.set(0,0,0)
+
+}
+
+generateMountain()
+
+/* controls */
+
+let keys={}
+
+document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true)
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false)
+
+/* camera */
+
+camera.position.set(0,6,12)
+
+/* animation */
+
+function animate(){
+
+requestAnimationFrame(animate)
+
+let moveSpeed=slowDown?speed*0.4:speed
+
+if(keys["a"])skier.position.x-=.15
+if(keys["d"])skier.position.x+=.15
+
+skier.position.z-=moveSpeed
+
+camera.position.x=skier.position.x
+camera.position.z=skier.position.z+12
+camera.lookAt(skier.position)
+
+/* snow */
+
+snow.forEach(s=>{
+
+s.position.y-=.6
+
+if(s.position.y<0)s.position.y=200
+
+})
+
+renderer.render(scene,camera)
+
+}
+
+animate()
+
+</script>
+
+</body>
+</html>
